@@ -1,7 +1,8 @@
-import { Directive, ElementRef, Input, ComponentFactoryResolver, ViewContainerRef } from "@angular/core";
+import { Directive, ElementRef, Input, ComponentFactoryResolver, ViewContainerRef, TemplateRef } from '@angular/core';
 
 import { MentionListComponent } from './mention-list.component';
 import { getValue, insertValue, getCaretPosition, setCaretPosition } from './mention-utils';
+import { Mentionable } from './mentionable';
 
 const KEY_BACKSPACE = 8;
 const KEY_TAB = 9;
@@ -29,7 +30,7 @@ const KEY_2 = 50;
   }
 })
 export class MentionDirective {
-  items: string[];
+  items: Mentionable[];
   startPos: number;
   startNode;
   searchList: MentionListComponent;
@@ -43,11 +44,21 @@ export class MentionDirective {
 
   @Input() triggerChar: string = "@";
 
-  @Input() set mention(items:string []){
-    this.items = items.sort();
+  @Input() set mention(items:Mentionable []){
+    this.items = items.sort((i1, i2) => {
+      if (i1.text < i2.text) {
+        return -1;
+      }
+      if (i1.text > i2.text) {
+        return 1;
+      }
+      return 0;
+    });
   }
 
-  @Input() mentionSelect: (selection: string) => (string) = (selection: string) => selection;
+  @Input() listTemplate: TemplateRef<any>;
+
+  @Input() mentionSelect: (item: Mentionable) => (string) = (item: Mentionable) => this.triggerChar + item.text;
 
   setIframe(iframe: HTMLIFrameElement) {
     this.iframe = iframe;
@@ -122,7 +133,7 @@ export class MentionDirective {
             // value is inserted without a trailing space for consistency
             // between element types (div and iframe do not preserve the space)
             insertValue(nativeElement, this.startPos, pos,
-              this.mentionSelect(this.triggerChar + this.searchList.activeItem), this.iframe);
+              this.mentionSelect(this.searchList.activeItem), this.iframe);
             // fire input event so angular bindings are updated
             if ("createEvent" in document) {
               var evt = document.createEvent("HTMLEvents");
@@ -161,7 +172,7 @@ export class MentionDirective {
             mention += charPressed;
           }
           let searchString = mention.toLowerCase();
-          let matches = this.items.filter(e => e.toLowerCase().startsWith(searchString));
+          let matches = this.items.filter(e => e.text.toLowerCase().startsWith(searchString));
           this.searchList.items = matches;
           this.searchList.hidden = matches.length == 0 || pos <= this.startPos;
         }
@@ -177,6 +188,7 @@ export class MentionDirective {
       this.searchList.items = this.items;
       this.searchList.hidden = this.items.length==0;
       this.searchList.position(nativeElement, this.iframe);
+      this.searchList.listTemplate = this.listTemplate;
       componentRef.instance['itemClick'].subscribe(() => {
         nativeElement.focus();
         let fakeKeydown = {"keyCode":KEY_ENTER,"wasClick":true};
