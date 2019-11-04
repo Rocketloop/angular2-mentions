@@ -30,7 +30,7 @@ import { getCaretCoordinates } from './caret-coords';
     <ul class="dropdown-menu scrollable-menu" #list [hidden]="hidden">
         <li *ngFor="let item of items; let i = index" [class.active]="activeIndex==i">
             <a class="text-primary" (mousedown)="activeIndex=i;itemClick.emit();$event.preventDefault()">
-              <ng-template [ngTemplateOutlet]="listTemplate" [ngOutletContext]="{'item': item}"></ng-template>
+              <ng-template *ngTemplateOutlet="listTemplate;context:{'item': item}"></ng-template>
             </a>
         </li>
     </ul>
